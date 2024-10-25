@@ -19,6 +19,8 @@ class ViewModel {
     @Published var users: [User] = [.init(name: "Anton", age: 18),
                          .init(name: "Max", age: 21),
                          .init(name: "Alex", age: 31)]
+    
+    var bithDayDateSubject: PassthroughSubject<Date, Never> = .init()
     let userServise = UserService()
     
     func obtainUsers() {
@@ -34,6 +36,11 @@ class ViewModel {
                 self?.users = users
             }.store(in: &cancellables)
 
+    }
+    
+    func obtainUsrtBirhDayDate() {
+        let date = Date()
+        bithDayDateSubject.send(date)
     }
     
     func addRandomUser() {
@@ -112,7 +119,9 @@ class ViewController: UIViewController {
             .store(in: &cancellables)
         
         configureBindings()
-        
+    }
+    
+    func configureBindings() {
         let namePublisher =  NotificationCenter.Publisher(center: .default, name: .userNameChanged)
             .map({ $0.object as? String })
         
@@ -124,9 +133,12 @@ class ViewController: UIViewController {
         $isTextLabelVisible.assign(to: \.isHidden, on: textLabel) // ниже равнозначное значение
             .store(in: &cancellables)
         
-    }
-    
-    func configureBindings() {
+        viewModel.bithDayDateSubject // новые подписчики не будут получать старых изменений
+            .sink { userDate in
+                print("User date: \(userDate)")
+            }
+            .store(in: &cancellables)
+        
         viewModel.$users
         //            .dropFirst() // дропает первый вызов
             .sink { [weak self] users in
