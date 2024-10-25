@@ -78,11 +78,23 @@ class ViewController: UIViewController {
         ])
         
         configureBindings()
+        
+        let namePublisher =  NotificationCenter.Publisher(center: .default, name: .userNameChanged)
+            .map({ $0.object as? String })
+        
+        namePublisher
+            .receive(on: DispatchQueue.main)
+            .assign(to: \.text, on: textLabel)
+            .store(in: &cancellables)
+        
+        $isTextLabelVisible.assign(to: \.isHidden, on: textLabel) // ниже равнозначное значение
+            .store(in: &cancellables)
+        
     }
     
     func configureBindings() {
         viewModel.$users
-//            .dropFirst() // дропает первый вызов
+        //            .dropFirst() // дропает первый вызов
             .sink { [weak self] users in
                 for user in users {
                     self?.addUserLabel(by: user)
@@ -109,7 +121,9 @@ class ViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        NotificationCenter.default.post(name: .userNameChanged, object: "Anton")
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1) {
+            NotificationCenter.default.post(name: .userNameChanged, object: "Anton")
+        }
     }
 }
 
