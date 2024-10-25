@@ -74,6 +74,14 @@ class ViewController: UIViewController {
         return stack
     }()
     
+    lazy var textField: UITextField = {
+        let field = UITextField()
+        field.translatesAutoresizingMaskIntoConstraints = false
+        field.borderStyle = .line
+        field.placeholder = "Password"
+        return field
+    }()
+    
     @Published
     var isTextLabelVisible: Bool = false
     
@@ -84,16 +92,24 @@ class ViewController: UIViewController {
         
         view.backgroundColor = .systemMint
         
-        view.addSubview(stackView)
-        view.addSubview(actionButton)
+        view.addSubview(textField)
         
         NSLayoutConstraint.activate([
-            stackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            stackView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            
-            actionButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            actionButton.topAnchor.constraint(equalTo: stackView.bottomAnchor, constant: 10),
+            textField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            textField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            textField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
         ])
+        
+        let passwordPredicate = NSPredicate(format: "SELF MATCHES %@ ", "^(?=.*[a-z])(?=.*[0-9])(?=.*[A-Z]).{6,}$")
+        
+        textField.textPublisher
+            .debounce(for: 0.5 , scheduler: DispatchQueue.main) // здаержка между тем что ввели и отработали в поиске удобно
+//            .removeDuplicates() // удаление одного и того же символа
+            .map({ passwordPredicate.evaluate(with: $0) })
+            .sink { value in
+                print("Text field is valid: \(value)")
+            }
+            .store(in: &cancellables)
         
         configureBindings()
         
@@ -142,6 +158,15 @@ class ViewController: UIViewController {
         DispatchQueue.global().asyncAfter(deadline: .now() + 1) {
             NotificationCenter.default.post(name: .userNameChanged, object: "Anton")
         }
+    }
+}
+
+extension UITextField {
+    var textPublisher: AnyPublisher<String, Never> {
+        NotificationCenter.default.publisher(for: UITextField.textDidChangeNotification)
+            .compactMap({ $0.object as? UITextField })
+            .map({ $0.text ?? "" })
+            .eraseToAnyPublisher()
     }
 }
 
