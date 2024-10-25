@@ -8,15 +8,33 @@
 import UIKit
 import Combine
 
-struct User {
+struct User: Codable {
     let name: String
     let age: Int
 }
 
 class ViewModel {
+    
+    private var cancellables: Set<AnyCancellable> = []
     @Published var users: [User] = [.init(name: "Anton", age: 18),
                          .init(name: "Max", age: 21),
                          .init(name: "Alex", age: 31)]
+    let userServise = UserService()
+    
+    func obtainUsers() {
+        userServise.obtainUsers()
+            .subscribe(on: DispatchQueue.main)
+            .sink { completion in
+                switch completion {
+                case .failure(let error):
+                    print("Error: \(error)")
+                default: break
+                }
+            } receiveValue: { [weak self] users in
+                self?.users = users
+            }.store(in: &cancellables)
+
+    }
     
     func addRandomUser() {
         users.append(.init(name: "New User \(Int.random(in: 0 ..< 10))", age: 32))
