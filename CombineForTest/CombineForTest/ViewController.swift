@@ -14,9 +14,13 @@ struct User {
 }
 
 class ViewModel {
-    var  user: [User] = [.init(name: "Anton", age: 18),
+    @Published var users: [User] = [.init(name: "Anton", age: 18),
                          .init(name: "Max", age: 21),
                          .init(name: "Alex", age: 31)]
+    
+    func addRandomUser() {
+        users.append(.init(name: "New User \(Int.random(in: 0 ..< 10))", age: 32))
+    }
 }
 
 class ViewController: UIViewController {
@@ -36,7 +40,7 @@ class ViewController: UIViewController {
         button.setTitle("Press", for: .normal)
         
         let action = UIAction { _ in
-            self.isTextLabelVisible.toggle()
+            self.viewModel.addRandomUser()
         }
         button.addAction(action, for: .touchUpInside)
         return button
@@ -62,29 +66,44 @@ class ViewController: UIViewController {
         
         view.backgroundColor = .systemMint
         
-        view.addSubview(textLabel)
+        view.addSubview(stackView)
         view.addSubview(actionButton)
         
         NSLayoutConstraint.activate([
-            textLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            textLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            stackView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            stackView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             
             actionButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            actionButton.centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: 50),
+            actionButton.topAnchor.constraint(equalTo: stackView.bottomAnchor, constant: 10),
         ])
         
-        let namePublisher =  NotificationCenter.Publisher(center: .default, name: .userNameChanged)
-            .map({ $0.object as? String })
-        
-        namePublisher
-            .assign(to: \.text, on: textLabel)
+        configureBindings()
+    }
+    
+    func configureBindings() {
+        viewModel.$users
+//            .dropFirst() // дропает первый вызов
+            .sink { [weak self] users in
+                for user in users {
+                    self?.addUserLabel(by: user)
+                }
+            }
             .store(in: &cancellables)
+    }
+    
+    func addUserLabel(by user: User) {
         
-        $isTextLabelVisible.assign(to: \.isHidden, on: textLabel) // ниже равнозначное значение
-//        $isTextLabelVisible.sink  { [weak self] isVisible in
-//            self?.textLabel.isHidden = isVisible
-//        }
-        .store(in: &cancellables)
+        guard stackView.subviews
+            .map({ $0 as? UILabel })
+            .filter({ $0?.text == user.name })
+            .isEmpty else { return }
+        
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: 21)
+        label.text = user.name
+        
+        stackView.addArrangedSubview(label)
     }
     
     override func viewDidAppear(_ animated: Bool) {
