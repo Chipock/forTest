@@ -106,9 +106,20 @@ class ViewController: UIViewController {
             textField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
             textField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
         ])
-        
+        configureBindings()
+    }
+    
+    func configureBindings() {
         let passwordPredicate = NSPredicate(format: "SELF MATCHES %@ ", "^(?=.*[a-z])(?=.*[0-9])(?=.*[A-Z]).{6,}$")
         
+        Publishers.Zip(textField.textPublisher, viewModel.$users) //для работы с ассинхронщиной
+            .sink { text, users in
+                
+            }
+        textField.textPublisher.combineLatest(viewModel.$users)
+            .sink { text, users in
+                
+            }
         textField.textPublisher
             .debounce(for: 0.5 , scheduler: DispatchQueue.main) // здаержка между тем что ввели и отработали в поиске удобно
 //            .removeDuplicates() // удаление одного и того же символа
@@ -116,21 +127,6 @@ class ViewController: UIViewController {
             .sink { value in
                 print("Text field is valid: \(value)")
             }
-            .store(in: &cancellables)
-        
-        configureBindings()
-    }
-    
-    func configureBindings() {
-        let namePublisher =  NotificationCenter.Publisher(center: .default, name: .userNameChanged)
-            .map({ $0.object as? String })
-        
-        namePublisher
-            .receive(on: DispatchQueue.main)
-            .assign(to: \.text, on: textLabel)
-            .store(in: &cancellables)
-        
-        $isTextLabelVisible.assign(to: \.isHidden, on: textLabel) // ниже равнозначное значение
             .store(in: &cancellables)
         
         viewModel.bithDayDateSubject // новые подписчики не будут получать старых изменений
